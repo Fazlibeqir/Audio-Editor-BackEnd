@@ -3,10 +3,8 @@ package ukim.finki.audioeditor.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import ukim.finki.audioeditor.models.AudioMetadata;
 import ukim.finki.audioeditor.service.AudioService;
 
@@ -26,11 +24,16 @@ public class AudioController {
     }
 
 
-//    @PostMapping("/upload")
-//    public ResponseEntity<String> uploadAudioFile(@RequestParam("file") MultipartFile file) {
-//
-//        return audioService.uploadAudioFile(file);
-//    }
+    @PostMapping("/uploadAudio")
+    public ResponseEntity uploadAudioFile(@RequestParam(name="file") MultipartFile file) {
+        try{
+            String fileName = audioService.saveTest(file);
+            System.out.println(fileName);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return ResponseEntity.ok().build();
+    }
 //    @GetMapping("/status/{jobId}")
 //    public ResponseEntity<String> getProcessingStatus(@PathVariable String jobId){
 //        return audioService.getProcessingStatus(jobId);

@@ -1,20 +1,46 @@
 package ukim.finki.audioeditor.service;
 
 import com.google.api.core.ApiFuture;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import com.google.firebase.cloud.FirestoreClient;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 //import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import ukim.finki.audioeditor.models.AudioMetadata;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 //import ukim.finki.audioeditor.processing.FFmpegProcessingService;
 //import ukim.finki.audioeditor.repository.FirestoreRepository;
 
 @Service
 public class AudioService {
+    private Storage storage;
+    @EventListener
+    public void init (ApplicationReadyEvent event){
+        try{
+            ClassPathResource serviceAccount = new ClassPathResource("service-account.json");
+            storage = StorageOptions.newBuilder().
+                    setCredentials(GoogleCredentials.fromStream(serviceAccount.getInputStream())).
+                    setProjectId("audio-editor-database").build().getService();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
 
     public void createAudioMetaData(AudioMetadata audioMetadata) {
         Firestore firestore = FirestoreClient.getFirestore();
@@ -28,6 +54,26 @@ public class AudioService {
         }catch (InterruptedException | ExecutionException e){
             e.printStackTrace();
         }
+    }
+    private String getExtension(String originalFileName) {
+        return StringUtils.getFilenameExtension(originalFileName);
+    }
+    private String generateFileName(String originalFileName) {
+        return UUID.randomUUID().toString() + "." + getExtension(originalFileName);
+    }
+
+    public String saveTest(MultipartFile file) throws IOException {
+        String audioName = generateFileName(file.getOriginalFilename());
+        Map<String , String> map = new HashMap<>();
+        map.put("firebaseStorageDownloadTokens", audioName);
+        BlobId blobId = BlobId.of("audio-editor-database.firebasestorage.app", audioName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setMetadata(map)
+                .setContentType(file.getContentType())
+                .build();
+        storage.create(blobInfo, file.getInputStream());
+        return audioName;
+
     }
 }
 //    final private FirestoreRepository firestoreRepository;
