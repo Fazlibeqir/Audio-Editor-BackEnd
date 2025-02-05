@@ -20,6 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 import ukim.finki.audioeditor.models.AudioMetadata;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -66,13 +68,20 @@ public class AudioService {
         String audioName = generateFileName(file.getOriginalFilename());
         Map<String , String> map = new HashMap<>();
         map.put("firebaseStorageDownloadTokens", audioName);
+
         BlobId blobId = BlobId.of("audio-editor-database.firebasestorage.app", audioName);
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
                 .setMetadata(map)
                 .setContentType(file.getContentType())
                 .build();
+
         storage.create(blobInfo, file.getInputStream());
-        return audioName;
+
+        String downloadUrl = "https://firebasestorage.googleapis.com/v0/b/audio-editor-database.appspot.com/o/"
+                + URLEncoder.encode(audioName, StandardCharsets.UTF_8)
+                + "?alt=media&token=" + audioName;
+
+        return downloadUrl;
 
     }
 }

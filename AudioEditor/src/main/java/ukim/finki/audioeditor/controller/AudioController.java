@@ -1,6 +1,7 @@
 package ukim.finki.audioeditor.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,15 +26,17 @@ public class AudioController {
 
 
     @PostMapping("/uploadAudio")
-    public ResponseEntity uploadAudioFile(@RequestParam(name="file") MultipartFile file) {
-        try{
-            String fileName = audioService.saveTest(file);
-            System.out.println(fileName);
-        } catch (Exception e){
+    public ResponseEntity<String> uploadAudioFile(@RequestParam(name="file") MultipartFile file) {
+        try {
+            String fileDownloadUrl = audioService.saveTest(file);
+            System.out.println("Download URL: " + fileDownloadUrl);
+            return ResponseEntity.ok(fileDownloadUrl);
+        } catch (Exception e) {
             e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload file.");
         }
-        return ResponseEntity.ok().build();
     }
+
 //    @GetMapping("/status/{jobId}")
 //    public ResponseEntity<String> getProcessingStatus(@PathVariable String jobId){
 //        return audioService.getProcessingStatus(jobId);
