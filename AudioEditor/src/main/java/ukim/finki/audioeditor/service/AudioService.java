@@ -5,10 +5,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
+import com.google.cloud.storage.*;
 import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -32,9 +29,10 @@ import java.util.concurrent.ExecutionException;
 @Service
 public class AudioService {
     private Storage storage;
+
     @EventListener
-    public void init (ApplicationReadyEvent event){
-        try{
+    public void init(ApplicationReadyEvent event) {
+        try {
             ClassPathResource serviceAccount = new ClassPathResource("service-account.json");
             storage = StorageOptions.newBuilder().
                     setCredentials(GoogleCredentials.fromStream(serviceAccount.getInputStream())).
@@ -51,25 +49,32 @@ public class AudioService {
         audioMetadata.setId(docReference.getId());
 
         ApiFuture<WriteResult> apiFuture = docReference.set(audioMetadata);
-        try{
+        try {
             apiFuture.get();
-        }catch (InterruptedException | ExecutionException e){
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
     }
+
     private String getExtension(String originalFileName) {
         return StringUtils.getFilenameExtension(originalFileName);
     }
+
     private String generateFileName(String originalFileName) {
         return UUID.randomUUID().toString() + "." + getExtension(originalFileName);
     }
 
     public String saveTest(MultipartFile file) throws IOException {
+        //String projectId = "audio-editor-database";
+
+        // The ID of your GCS bucket
+        String bucketName = "audio-editor-database.firebasestorage.app";
+
         String audioName = generateFileName(file.getOriginalFilename());
-        Map<String , String> map = new HashMap<>();
+        Map<String, String> map = new HashMap<>();
         map.put("firebaseStorageDownloadTokens", audioName);
 
-        BlobId blobId = BlobId.of("audio-editor-database.firebasestorage.app", audioName);
+        BlobId blobId = BlobId.of(bucketName, audioName);
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
                 .setMetadata(map)
                 .setContentType(file.getContentType())
@@ -77,9 +82,9 @@ public class AudioService {
 
         storage.create(blobInfo, file.getInputStream());
 
-        String downloadUrl = "https://firebasestorage.googleapis.com/v0/b/audio-editor-database.appspot.com/o/"
-                + URLEncoder.encode(audioName, StandardCharsets.UTF_8)
-                + "?alt=media&token=" + audioName;
+        Blob blob = storage.get(blobId);
+        // Create the correct download URL
+        String downloadUrl = blob.getMediaLink();
 
         return downloadUrl;
 
