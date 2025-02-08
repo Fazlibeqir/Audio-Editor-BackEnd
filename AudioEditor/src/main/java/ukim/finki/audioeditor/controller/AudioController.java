@@ -9,6 +9,8 @@ import org.springframework.web.multipart.MultipartFile;
 import ukim.finki.audioeditor.models.AudioMetadata;
 import ukim.finki.audioeditor.service.AudioService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/audio")
 public class AudioController {
@@ -21,9 +23,7 @@ public class AudioController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"message\": \"Audio metadata created successfully\"}");
-
     }
-
 
     @PostMapping("/uploadAudio")
     public ResponseEntity<String> uploadAudioFile(@RequestParam MultipartFile file) {
@@ -34,6 +34,18 @@ public class AudioController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload file.");
+        }
+    }
+
+    @PostMapping("/mergeTracks")
+    public ResponseEntity<String> mergeAudioFiles(@RequestParam List<MultipartFile> files) {
+        try {
+            String mergedFileDownloadUrl = audioService.mergeTracks(files);
+            System.out.println("Merged File Download URL: " + mergedFileDownloadUrl);
+            return ResponseEntity.ok(mergedFileDownloadUrl);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to merge files.");
         }
     }
 

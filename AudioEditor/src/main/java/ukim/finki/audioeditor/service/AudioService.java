@@ -1,5 +1,4 @@
 package ukim.finki.audioeditor.service;
-
 import com.google.api.core.ApiFuture;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.DocumentReference;
@@ -11,25 +10,23 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-//import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import ukim.finki.audioeditor.models.AudioMetadata;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-//import ukim.finki.audioeditor.processing.FFmpegProcessingService;
-//import ukim.finki.audioeditor.repository.FirestoreRepository;
 
 @Service
 public class AudioService {
     private Storage storage;
-
     @EventListener
     public void init(ApplicationReadyEvent event) {
         try {
@@ -61,7 +58,11 @@ public class AudioService {
     }
 
     private String generateFileName(String originalFileName) {
-        return UUID.randomUUID().toString() + "." + getExtension(originalFileName);
+        String extension = getExtension(originalFileName);
+        if (extension == null || extension.isEmpty()) {
+            extension = "mp3"; // Default extension
+        }
+        return UUID.randomUUID().toString() + "." + extension;
     }
 
     public String saveTest(MultipartFile file) throws IOException {
@@ -89,46 +90,78 @@ public class AudioService {
         return downloadUrl;
 
     }
+
+    public String mergeTracks(List<MultipartFile> files) throws IOException, InterruptedException {
+        // Save the uploaded files to the local file system
+        File[] audioFiles = new File[files.size()];
+        for (int i = 0; i < files.size(); i++) {
+            String uniqueFileName = generateFileName(files.get(i).getOriginalFilename());
+            audioFiles[i] = convertMultipartFileToFile(files.get(i),uniqueFileName);
+        }
+
+        // Merge the audio files using ffmpeg
+        String mergedFilePath = "merged_audio.mp3";
+        mergeAudioFiles(audioFiles, mergedFilePath);
+
+        File mergedFile = new File(mergedFilePath);
+        String bucketName = "audio-editor-database.firebasestorage.app";
+        String audioName = generateFileName(mergedFile.getName());
+        Map<String, String> map = new HashMap<>();
+        map.put("firebaseStorageDownloadTokens", audioName);
+
+        BlobId blobId = BlobId.of(bucketName, audioName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setMetadata(map)
+                .setContentType("audio/mpeg")
+                .build();
+
+        storage.create(blobInfo, new FileInputStream(mergedFile));
+
+        Blob blob = storage.get(blobId);
+        // Create the correct download URL
+        String downloadUrl = blob.getMediaLink();
+
+        return downloadUrl;
+    }
+
+    private File convertMultipartFileToFile(MultipartFile file, String uniqueFileName) throws IOException {
+        File convFile =File.createTempFile("temp",uniqueFileName);
+        FileOutputStream fos = new FileOutputStream(convFile);
+        fos.write(file.getBytes());
+        fos.close();
+        return convFile;
+    }
+
+    private void mergeAudioFiles(File[] audioFiles, String outputFilePath) throws IOException, InterruptedException {
+       File fileList = File.createTempFile("ffmpeg_file_list", ".txt");
+       try (FileOutputStream fos = new FileOutputStream(fileList)){
+           for(File audioFile : audioFiles){
+               String escapedPath = audioFile.getAbsolutePath().replace("'", "\\'");
+               String line = "file '" + escapedPath + "'\n";
+               fos.write(line.getBytes());
+           }
+       }
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffmpeg",
+                "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", fileList.getAbsolutePath(),
+                "-c", "copy",
+                outputFilePath
+        );
+        pb.redirectErrorStream(true); // Merge stdout and stderr
+        Process process = pb.start();
+        // (Optional) Read the process output for debugging
+        String processOutput = new String(process.getInputStream().readAllBytes());
+        process.waitFor();
+
+        // Clean up the temporary file list
+        fileList.delete();
+
+        // Check if ffmpeg failed
+        if (process.exitValue() != 0) {
+            throw new IOException("ffmpeg process failed: " + processOutput);
+        }
+    }
 }
-//    final private FirestoreRepository firestoreRepository;
-//    final private FFmpegProcessingService ffmpegProcessingService;
-//
-//
-//    public AudioService(FirestoreRepository firestoreRepository, FFmpegProcessingService ffmpegProcessingService) {
-//        this.firestoreRepository = firestoreRepository;
-//        this.ffmpegProcessingService = ffmpegProcessingService;
-//    }
-
-
-//    public String generateJobId() {
-//        return UUID.randomUUID().toString();
-//    }
-
-    // Upload audio file and initiate processing
-//    public ResponseEntity<String> uploadAudioFile(MultipartFile file) {
-//        String jobId = generateJobId(); // Generate a unique job ID
-//        String filePath = "audioFiles/" + file.getOriginalFilename();
-//        Long fileSize = file.getSize();
-//
-//        try {
-//            // Upload the file to Firebase Storage
-//            firestoreRepository.uploadFileToStorage(file.getInputStream(), filePath);
-//
-//            // Create metadata entry in Firestore
-//            firestoreRepository.createAudioMetadata(jobId, file.getOriginalFilename(), fileSize, filePath);
-//
-//            // Trigger backend to process the file asynchronously
-//            ffmpegProcessingService.processAudioFile(jobId, filePath);
-//
-//            return ResponseEntity.ok("File uploaded and processing started");
-//        } catch (IOException e) {
-//            return ResponseEntity.status(500).body("Error uploading file: " + e.getMessage());
-//        }
-//    }
-
-    // Fetch processing status from Firestore
-//    public ResponseEntity<String> getProcessingStatus(String jobId) {
-//        String status = firestoreRepository.getProcessingStatus(jobId);
-//        return ResponseEntity.ok(status);
-//    }
-

@@ -15,8 +15,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AudioMetadata {
-
-
     private String id;
     private String fileName;
     private String filePath;
