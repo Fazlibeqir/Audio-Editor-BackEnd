@@ -26,7 +26,7 @@ public class AudioController {
 
 
     @PostMapping("/uploadAudio")
-    public ResponseEntity<String> uploadAudioFile(@RequestParam(name="file") MultipartFile file) {
+    public ResponseEntity<String> uploadAudioFile(@RequestParam MultipartFile file) {
         try {
             String fileDownloadUrl = audioService.saveTest(file);
             System.out.println("Download URL: " + fileDownloadUrl);
