@@ -5,7 +5,6 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ResourceUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,16 +14,23 @@ import java.io.IOException;
 public class FirebaseConfig {
 
     @PostConstruct
-    public void firestore() throws IOException {
+    public void initializeFirebase() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) { // Prevent multiple initializations
-            File file = ResourceUtils.getFile("/etc/secrets/service-account.json");
-            FileInputStream serviceAccount = new FileInputStream(file);
+            // Use the absolute path from the filesystem
+            File serviceAccountFile = new File("/etc/secrets/service-account.json");
 
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
+            if (!serviceAccountFile.exists()) {
+                throw new IOException("Firebase service account file not found: "
+                        + serviceAccountFile.getAbsolutePath());
+            }
 
-            FirebaseApp.initializeApp(options);
+            // Use try-with-resources to ensure the stream is closed
+            try (FileInputStream serviceAccountStream = new FileInputStream(serviceAccountFile)) {
+                FirebaseOptions options = new FirebaseOptions.Builder()
+                        .setCredentials(GoogleCredentials.fromStream(serviceAccountStream))
+                        .build();
+                FirebaseApp.initializeApp(options);
+            }
         }
     }
 }
