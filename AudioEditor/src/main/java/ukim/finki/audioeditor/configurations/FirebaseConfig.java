@@ -17,7 +17,7 @@ public class FirebaseConfig {
     @PostConstruct
     public void firestore() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) { // Prevent multiple initializations
-            File file = ResourceUtils.getFile("classpath:service-account.json");
+            File file = ResourceUtils.getFile("classpath:/etc/secrets/service-account.json");
             FileInputStream serviceAccount = new FileInputStream(file);
 
             FirebaseOptions options = new FirebaseOptions.Builder()
