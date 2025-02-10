@@ -1,28 +1,18 @@
 package ukim.finki.audioeditor.service;
-import com.google.api.core.ApiFuture;
+
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.WriteResult;
 import com.google.cloud.storage.*;
-import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import ukim.finki.audioeditor.models.AudioMetadata;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 @Service
 public class AudioService {
@@ -30,28 +20,25 @@ public class AudioService {
     @EventListener
     public void init(ApplicationReadyEvent event) {
         try {
-            ClassPathResource serviceAccount = new ClassPathResource("service-account.json");
-            storage = StorageOptions.newBuilder().
-                    setCredentials(GoogleCredentials.fromStream(serviceAccount.getInputStream())).
-                    setProjectId("audio-editor-database").build().getService();
+            // Use the absolute path where Render mounts your secret file
+            File serviceAccountFile = new File("/etc/secrets/service-account.json");
+
+            if (!serviceAccountFile.exists()) {
+                throw new IOException("Service account file not found at: " + serviceAccountFile.getAbsolutePath());
+            }
+
+            try (InputStream credentialsStream = new FileInputStream(serviceAccountFile)) {
+                storage = StorageOptions.newBuilder()
+                        .setCredentials(GoogleCredentials.fromStream(credentialsStream))
+                        .setProjectId("audio-editor-database")
+                        .build()
+                        .getService();
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
-    public void createAudioMetaData(AudioMetadata audioMetadata) {
-        Firestore firestore = FirestoreClient.getFirestore();
-
-        DocumentReference docReference = firestore.collection("audioMetadata").document();
-        audioMetadata.setId(docReference.getId());
-
-        ApiFuture<WriteResult> apiFuture = docReference.set(audioMetadata);
-        try {
-            apiFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-    }
 
     private String getExtension(String originalFileName) {
         return StringUtils.getFilenameExtension(originalFileName);

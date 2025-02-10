@@ -2,11 +2,12 @@ package ukim.finki.audioeditor.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import ukim.finki.audioeditor.models.AudioMetadata;
 import ukim.finki.audioeditor.service.AudioService;
 
 import java.util.List;
@@ -17,13 +18,6 @@ public class AudioController {
     @Autowired
     private AudioService audioService;
 
-    @PostMapping("/upload")
-    public ResponseEntity<String> creatAudioMetaData(@RequestBody AudioMetadata audioMetadata){
-        audioService.createAudioMetaData(audioMetadata);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"message\": \"Audio metadata created successfully\"}");
-    }
 
     @PostMapping("/uploadAudio")
     public ResponseEntity<String> uploadAudioFile(@RequestParam MultipartFile file) {
@@ -49,8 +43,4 @@ public class AudioController {
         }
     }
 
-//    @GetMapping("/status/{jobId}")
-//    public ResponseEntity<String> getProcessingStatus(@PathVariable String jobId){
-//        return audioService.getProcessingStatus(jobId);
-//    }
 }
