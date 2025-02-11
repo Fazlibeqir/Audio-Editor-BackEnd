@@ -18,7 +18,6 @@ public class AudioController {
     @Autowired
     private AudioService audioService;
 
-
     @PostMapping("/uploadAudio")
     public ResponseEntity<String> uploadAudioFile(@RequestParam MultipartFile file) {
         try {
@@ -42,5 +41,4 @@ public class AudioController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to merge files.");
         }
     }
-
 }

@@ -16,7 +16,7 @@ public class FirebaseConfig {
     @PostConstruct
     public void initializeFirebase() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) { // Prevent multiple initializations
-            // Use the absolute path from the filesystem
+
             File serviceAccountFile = new File("/etc/secrets/service-account.json");
 
             if (!serviceAccountFile.exists()) {

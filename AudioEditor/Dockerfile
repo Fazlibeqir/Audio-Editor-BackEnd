@@ -17,6 +17,11 @@ RUN ./mvnw package -DskipTests
 
 FROM openjdk:17-jdk-slim
 
+# Install ffmpeg in the final image
+RUN apt-get update && \
+    apt-get install -y ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar

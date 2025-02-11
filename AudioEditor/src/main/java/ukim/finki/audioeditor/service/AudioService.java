@@ -39,7 +39,6 @@ public class AudioService {
         }
     }
 
-
     private String getExtension(String originalFileName) {
         return StringUtils.getFilenameExtension(originalFileName);
     }
@@ -47,14 +46,12 @@ public class AudioService {
     private String generateFileName(String originalFileName) {
         String extension = getExtension(originalFileName);
         if (extension == null || extension.isEmpty()) {
-            extension = "mp3"; // Default extension
+            extension = "mp3";
         }
         return UUID.randomUUID().toString() + "." + extension;
     }
 
     public String saveTest(MultipartFile file) throws IOException {
-        //String projectId = "audio-editor-database";
-
         // The ID of your GCS bucket
         String bucketName = "audio-editor-database.firebasestorage.app";
 
@@ -71,11 +68,8 @@ public class AudioService {
         storage.create(blobInfo, file.getInputStream());
 
         Blob blob = storage.get(blobId);
-        // Create the correct download URL
         String downloadUrl = blob.getMediaLink();
-
         return downloadUrl;
-
     }
 
     public String mergeTracks(List<MultipartFile> files) throws IOException, InterruptedException {
@@ -86,7 +80,6 @@ public class AudioService {
             audioFiles[i] = convertMultipartFileToFile(files.get(i),uniqueFileName);
         }
 
-        // Merge the audio files using ffmpeg
         String mergedFilePath = "merged_audio.mp3";
         mergeAudioFiles(audioFiles, mergedFilePath);
 
@@ -105,9 +98,7 @@ public class AudioService {
         storage.create(blobInfo, new FileInputStream(mergedFile));
 
         Blob blob = storage.get(blobId);
-        // Create the correct download URL
         String downloadUrl = blob.getMediaLink();
-
         return downloadUrl;
     }
 
@@ -139,12 +130,10 @@ public class AudioService {
         );
         pb.redirectErrorStream(true); // Merge stdout and stderr
         Process process = pb.start();
-        // (Optional) Read the process output for debugging
         String processOutput = new String(process.getInputStream().readAllBytes());
         process.waitFor();
 
-        // Clean up the temporary file list
-        fileList.delete();
+        fileList.delete(); // Clean up the temporary file list
 
         // Check if ffmpeg failed
         if (process.exitValue() != 0) {
